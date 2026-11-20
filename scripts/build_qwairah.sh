@@ -18,7 +18,7 @@ find feeds/luci package -type f \( -name "*.htm" -o -name "*.js" -o -name "*.lua
 cat << 'CONF' > .config
 CONFIG_TARGET_ramips=y
 CONFIG_TARGET_ramips_mt7621=y
-CONFIG_TARGET_MULTI_PROFILE=y
+# CONFIG_TARGET_MULTI_PROFILE=y
 CONFIG_PACKAGE_kmod-mt76x2=y
 CONFIG_PACKAGE_luci=y
 CONFIG_PACKAGE_luci-base=y
@@ -61,7 +61,16 @@ fi
 
 cp -rf "$ROOT_DIR/files/." files/
 
-make -j"$(nproc)" || { make -j1 target/linux/install V=sc; exit 1; }
+make -j"$(nproc)" || {
+    echo "=== FAILED LOGS IN openwrt/logs ==="
+    find logs -type f -name "*.txt" -o -name "*fail*" 2>/dev/null | head -n 10 | while read -r lf; do
+        echo "--- $lf ---"
+        tail -n 35 "$lf" || true
+    done
+    echo "=== RE-RUNNING WITH V=sc ==="
+    make -j1 V=sc || true
+    exit 1
+}
 
 mkdir -p "$ROOT_DIR/artifacts_out"
 cp -f bin/targets/ramips/mt7621/*sysupgrade.bin bin/targets/ramips/mt7621/*kernel.bin "$ROOT_DIR/artifacts_out/" 2>/dev/null || true
